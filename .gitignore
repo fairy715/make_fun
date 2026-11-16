@@ -13,6 +13,7 @@ credentials
 
 # Build and submission artifacts
 out/
+preview/
 transcripts.tar.gz
 *.tar.gz
 source.bundle
