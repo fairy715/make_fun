@@ -46,11 +46,9 @@
     ctx.font = `italic 14px ${SERIF}`;
     ctx.fillText(night.def.name, 30, 58);
     for (let i = 0; i < run.maxTrust; i++) heart(ctx, 196 + i * 20, 26, 16, i < run.trust);
-    if (run.mode === 'gale') {
-      ctx.fillStyle = '#ff9c7a';
-      ctx.font = `bold 13px ${SERIF}`;
-      ctx.fillText('GALE  x1.5', 196, 60);
-    }
+    ctx.fillStyle = run.mode === 'gale' ? '#ff9c7a' : '#9fd8b0';
+    ctx.font = `bold 13px ${SERIF}`;
+    ctx.fillText(run.mode === 'gale' ? 'GALE  x1.5' : 'CALM', 196, 60);
 
     // Score and combo.
     panel(ctx, width / 2 - 120, 14, 240, 62);

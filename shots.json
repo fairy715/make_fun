@@ -1,5 +1,5 @@
 [
-  { "name": "1-play.jpg", "query": "?shot=play&seed=13&night=6&t=16.6" },
+  { "name": "1-play.jpg", "query": "?shot=play&seed=76&night=6&t=10.1" },
   { "name": "2-title.jpg", "query": "?shot=title&t=14" },
   { "name": "3-upgrade.jpg", "query": "?shot=upgrade&seed=7&nights=3" },
   { "name": "4-end.jpg", "query": "?shot=end&seed=11&skill=skilled" }

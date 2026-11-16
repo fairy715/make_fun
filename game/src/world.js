@@ -5,14 +5,17 @@
 (function (LK) {
   'use strict';
 
-  /** Run modes: the gale runs the whole sea faster while the keeper's lamp keeps its own pace. */
+  /**
+   * Run modes. The gale is the main game: the whole sea runs faster while the keeper's lamp keeps
+   * its own pace. The calm (internally 'normal') is the gentler watch for a first evening.
+   */
   const MODES = {
-    normal: { name: 'Normal watch', pace: 1, scoreScale: 1 },
     gale: { name: 'Gale watch', pace: 1.6, scoreScale: 1.5 },
+    normal: { name: 'Calm watch', pace: 1, scoreScale: 1 },
   };
 
   function createRun(seed, mode) {
-    const m = MODES[mode] ? mode : 'normal';
+    const m = MODES[mode] ? mode : 'gale';
     return {
       seed,
       mode: m,

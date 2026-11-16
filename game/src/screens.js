@@ -40,8 +40,8 @@
     const h = 74;
     const cx = LK.VIEW.width / 2;
     return [
-      { mode: 'normal', x: cx - w - 18, y: 418, w, h, label: 'Normal watch', sub: 'Click · Enter · 1' },
-      { mode: 'gale', x: cx + 18, y: 418, w, h, label: 'Gale watch', sub: 'Faster seas · score x1.5 · G · 2' },
+      { mode: 'gale', x: cx - w - 18, y: 418, w, h, label: 'Gale watch', sub: 'The full storm · score x1.5 · Enter · 1' },
+      { mode: 'normal', x: cx + 18, y: 418, w, h, label: 'Calm watch', sub: 'Gentler seas to learn the lamp · C · 2' },
     ];
   }
 
@@ -304,7 +304,7 @@
   }
 
   function modeLine(run) {
-    return run.mode === 'gale' ? 'Gale watch · score x1.5' : 'Normal watch';
+    return run.mode === 'gale' ? 'Gale watch · score x1.5' : 'Calm watch';
   }
 
   function drawVictory(ctx, run, best, time) {

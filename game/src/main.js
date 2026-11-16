@@ -18,7 +18,7 @@
     offer: [],
     hover: -1,
     bests: { normal: LK.loadBest('normal'), gale: LK.loadBest('gale') },
-    lastMode: 'normal',
+    lastMode: 'gale',
     attract: null,
     frozen: false,
   };
@@ -127,11 +127,11 @@
       let chosen = null;
       for (const p of presses.clicks) {
         const index = rectIndexAt(buttons, p);
-        // A click anywhere else starts the mode played last (normal the first time).
+        // A click anywhere else starts the mode played last (the gale the first time).
         chosen = index >= 0 ? buttons[index].mode : game.lastMode;
       }
-      if (pressed('enter', ' ', '1')) chosen = 'normal';
-      if (pressed('g', '2')) chosen = 'gale';
+      if (pressed('enter', ' ', '1', 'g')) chosen = 'gale';
+      if (pressed('c', '2')) chosen = 'normal';
       if (chosen) {
         LK.playSound('click');
         startGame(chosen);

@@ -50,7 +50,7 @@
       game.mode = 'title';
       return;
     }
-    game.run = LK.createRun(seed, params.get('mode') || 'normal');
+    game.run = LK.createRun(seed, params.get('mode') || 'gale');
     game.view = LK.createView(seed);
     const pilot = LK.createAutopilot(params.get('skill') || 'expert', seed);
     const pickRng = LK.createRng(seed + 99);
