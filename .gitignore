@@ -1,0 +1,20 @@
+# Secrets: never commit
+*keypair*.json
+wallet.json
+.makefun/credentials
+.makefun/keypairs/
+.makefun/build-keys.json
+.makefun/recordings.json
+credentials
+.env
+.env.*
+*.pem
+*.key
+
+# Build and submission artifacts
+out/
+transcripts.tar.gz
+*.tar.gz
+source.bundle
+node_modules/
+.DS_Store
