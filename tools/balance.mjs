@@ -1,6 +1,6 @@
 // Balance simulation: plays many full runs of Lamplight Keeper with the computer keeper at each
 // skill level, on the game's own rule files, and reports how far each level gets.
-//   node tools/balance.mjs [runs per skill, default 60]
+//   node tools/balance.mjs [runs per skill, default 60] [mode: normal | gale]
 import { readFileSync } from 'node:fs';
 import { runInThisContext } from 'node:vm';
 import { fileURLToPath } from 'node:url';
@@ -19,8 +19,8 @@ export function loadRules() {
 }
 
 /** One full run with the computer keeper; returns how it went. */
-export function playRun(LK, skill, seed) {
-  const run = LK.createRun(seed);
+export function playRun(LK, skill, seed, mode) {
+  const run = LK.createRun(seed, mode);
   const pilot = LK.createAutopilot(skill, seed * 7 + 1);
   const pickRng = LK.createRng(seed * 13 + 5);
   const causes = {};
@@ -46,6 +46,8 @@ export function playRun(LK, skill, seed) {
 function main() {
   const LK = loadRules();
   const runs = Number(process.argv[2] || 60);
+  const mode = process.argv[3] || 'normal';
+  console.log(`mode ${mode}, ${runs} runs per skill`);
   for (const skill of Object.keys(LK.SKILLS)) {
     const reachedCount = new Array(LK.NIGHTS.length + 1).fill(0);
     let wins = 0;
@@ -54,7 +56,7 @@ function main() {
     const times = new Array(LK.NIGHTS.length).fill(0);
     const timesN = new Array(LK.NIGHTS.length).fill(0);
     for (let i = 0; i < runs; i++) {
-      const r = playRun(LK, skill, 1000 + i);
+      const r = playRun(LK, skill, 1000 + i, mode);
       reachedCount[r.reached] += 1;
       if (r.won) wins++;
       scoreSum += r.score;

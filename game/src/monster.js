@@ -31,8 +31,11 @@
     m.y += Math.sin(m.heading) * speed * dt;
   }
 
-  /** One step of every monster. onGrab(ship) sinks a ship it drags under. */
-  function updateMonsters(run, night, events, dt, onGrab) {
+  /**
+   * One step of every monster. dt is sea time, keeperDt real time (the light it takes to drive it
+   * off is the keeper's, so a gale does not shorten it). onGrab(ship) sinks a ship it drags under.
+   */
+  function updateMonsters(run, night, events, dt, onGrab, keeperDt) {
     const { MONSTER } = LK;
     for (const m of night.monsters) {
       m.swim += dt;
@@ -56,15 +59,16 @@
         }
       } else if (m.state === 'rise') {
         if (m.target && m.target.state === 'sail') swimToward(m, m.target.x, m.target.y, MONSTER.speed * 0.6, dt);
-        if (LK.isLit(night.lamp, m.x, m.y, MONSTER.radius, night.inFog(m.x, m.y))) m.lightOn += dt;
+        if (LK.isLit(night.lamp, m.x, m.y, MONSTER.radius, night.inFog(m.x, m.y))) m.lightOn += keeperDt === undefined ? dt : keeperDt;
         if (m.lightOn >= MONSTER.repelTime) {
           m.state = 'dive';
           m.timer = 1.3;
           m.heading = Math.atan2(m.y - LK.LIGHTHOUSE.y, m.x - LK.LIGHTHOUSE.x);
-          run.score += MONSTER.points;
+          const points = Math.round(MONSTER.points * run.scoreScale);
+          run.score += points;
           night.counts.repelled += 1;
           run.totals.repelled += 1;
-          events.push({ type: 'monsterRepelled', x: m.x, y: m.y, points: MONSTER.points });
+          events.push({ type: 'monsterRepelled', x: m.x, y: m.y, points });
         } else if (m.timer <= 0) {
           const prey = m.target;
           if (prey && prey.state === 'sail' && Math.hypot(prey.x - m.x, prey.y - m.y) < MONSTER.grabRange) {

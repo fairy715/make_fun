@@ -3,20 +3,23 @@
 (function (LK) {
   'use strict';
 
-  const KEY = 'lamplight-best';
+  /** Each mode keeps its own best: a gale score is not a normal one. */
+  function keyFor(mode) {
+    return mode === 'gale' ? 'lamplight-best-gale' : 'lamplight-best';
+  }
 
-  function loadBest() {
+  function loadBest(mode) {
     try {
-      const value = Number(window.localStorage.getItem(KEY));
+      const value = Number(window.localStorage.getItem(keyFor(mode)));
       return Number.isFinite(value) && value > 0 ? value : 0;
     } catch (e) {
       return 0;
     }
   }
 
-  function saveBest(score) {
+  function saveBest(score, mode) {
     try {
-      window.localStorage.setItem(KEY, String(score));
+      window.localStorage.setItem(keyFor(mode), String(score));
     } catch (e) {
       /* storage unavailable: the best score lasts this visit only */
     }

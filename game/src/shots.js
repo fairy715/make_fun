@@ -50,7 +50,7 @@
       game.mode = 'title';
       return;
     }
-    game.run = LK.createRun(seed);
+    game.run = LK.createRun(seed, params.get('mode') || 'normal');
     game.view = LK.createView(seed);
     const pilot = LK.createAutopilot(params.get('skill') || 'expert', seed);
     const pickRng = LK.createRng(seed + 99);
@@ -78,7 +78,8 @@
     const won = playNights(game, pilot, LK.NIGHTS.length, pickRng);
     game.mode = won && game.run.trust > 0 ? 'victory' : 'gameover';
     game.modeAge = 3;
-    game.best = Math.max(game.best, game.run.score + Number(params.get('best') || 0));
+    const mode = game.run.mode;
+    game.bests[mode] = Math.max(game.bests[mode], game.run.score + Number(params.get('best') || 0));
   }
 
   LK.prepareShot = prepareShot;

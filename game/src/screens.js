@@ -34,7 +34,18 @@
     line(ctx, words, y, 22, `rgba(255, 227, 154, ${a})`, 'bold');
   }
 
-  function drawTitle(ctx, time, best) {
+  /** The two mode buttons under the title; main.js tests clicks against these. */
+  function titleButtons() {
+    const w = 300;
+    const h = 74;
+    const cx = LK.VIEW.width / 2;
+    return [
+      { mode: 'normal', x: cx - w - 18, y: 418, w, h, label: 'Normal watch', sub: 'Click · Enter · 1' },
+      { mode: 'gale', x: cx + 18, y: 418, w, h, label: 'Gale watch', sub: 'Faster seas · score x1.5 · G · 2' },
+    ];
+  }
+
+  function drawTitle(ctx, time, bests, hover) {
     const w = LK.VIEW.width;
     const g = ctx.createLinearGradient(0, 0, 0, 300);
     g.addColorStop(0, 'rgba(2, 6, 16, 0.75)');
@@ -61,8 +72,31 @@
       ctx.fillStyle = 'rgba(235, 235, 225, 0.9)';
       ctx.fillText(text, w / 2 - 92, y);
     });
-    prompt(ctx, 'Click to light the lamp', 440, time);
-    if (best > 0) line(ctx, `Best watch: ${best.toLocaleString('en-US')}`, 476, 16, 'rgba(235, 235, 225, 0.7)');
+    titleButtons().forEach((b, i) => {
+      const on = hover === i;
+      const pulse = 0.5 + 0.5 * Math.sin(time * 3 + i * 1.5);
+      ctx.fillStyle = on ? 'rgba(60, 46, 24, 0.95)' : 'rgba(16, 22, 34, 0.9)';
+      ctx.strokeStyle = b.mode === 'gale' ? `rgba(255, 140, 110, ${0.6 + 0.4 * pulse})` : `rgba(255, 214, 140, ${0.6 + 0.4 * pulse})`;
+      ctx.lineWidth = on ? 3 : 2;
+      ctx.beginPath();
+      ctx.roundRect(b.x, b.y, b.w, b.h, 12);
+      ctx.fill();
+      ctx.stroke();
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.font = `bold 24px ${SERIF}`;
+      ctx.fillStyle = b.mode === 'gale' ? '#ffb39a' : '#ffe39a';
+      ctx.fillText(b.label, b.x + b.w / 2, b.y + 28);
+      ctx.font = `14px ${SERIF}`;
+      ctx.fillStyle = 'rgba(235, 235, 225, 0.8)';
+      ctx.fillText(b.sub, b.x + b.w / 2, b.y + 54);
+      const best = bests[b.mode] || 0;
+      if (best > 0) {
+        ctx.font = `15px ${SERIF}`;
+        ctx.fillStyle = 'rgba(235, 235, 225, 0.7)';
+        ctx.fillText(`Best ${best.toLocaleString('en-US')}`, b.x + b.w / 2, b.y + b.h + 18);
+      }
+    });
   }
 
   function drawNightBanner(ctx, night, age) {
@@ -265,8 +299,12 @@
     line(ctx, `The harbour lost its trust on night ${run.nightIndex + 1}: ${LK.NIGHTS[run.nightIndex].name}`, 220, 20, 'rgba(235, 235, 225, 0.9)', 'italic');
     statRows(run).forEach((r, i) => line(ctx, r, 290 + i * 34, 20, 'rgba(240, 240, 230, 0.92)'));
     line(ctx, `Final score ${run.score.toLocaleString('en-US')}`, 450, 34, '#ffd36b', 'bold');
-    line(ctx, run.score >= best && run.score > 0 ? 'A new best watch!' : `Best watch: ${best.toLocaleString('en-US')}`, 494, 18, 'rgba(235, 235, 225, 0.8)');
-    prompt(ctx, 'Click or press R to keep watch again', 580, time);
+    line(ctx, `${run.score >= best && run.score > 0 ? 'A new best watch!' : `Best watch: ${best.toLocaleString('en-US')}`}   ·   ${modeLine(run)}`, 494, 18, 'rgba(235, 235, 225, 0.8)');
+    prompt(ctx, 'Click or press R to keep watch again   ·   T for the title', 580, time);
+  }
+
+  function modeLine(run) {
+    return run.mode === 'gale' ? 'Gale watch · score x1.5' : 'Normal watch';
   }
 
   function drawVictory(ctx, run, best, time) {
@@ -280,8 +318,8 @@
     line(ctx, 'Seven nights kept. The first light of spring reaches the bay.', 220, 21, 'rgba(250, 240, 225, 0.95)', 'italic');
     statRows(run).forEach((r, i) => line(ctx, r, 290 + i * 34, 20, 'rgba(250, 245, 235, 0.95)'));
     line(ctx, `Final score ${run.score.toLocaleString('en-US')}`, 450, 34, '#ffd36b', 'bold');
-    line(ctx, run.score >= best ? 'A new best watch!' : `Best watch: ${best.toLocaleString('en-US')}`, 494, 18, 'rgba(250, 240, 225, 0.85)');
-    prompt(ctx, 'Click or press R to begin a new season', 580, time);
+    line(ctx, `${run.score >= best ? 'A new best watch!' : `Best watch: ${best.toLocaleString('en-US')}`}   ·   ${modeLine(run)}`, 494, 18, 'rgba(250, 240, 225, 0.85)');
+    prompt(ctx, 'Click or press R to begin a new season   ·   T for the title', 580, time);
   }
 
   function drawPause(ctx) {
@@ -298,4 +336,5 @@
   LK.drawVictory = drawVictory;
   LK.drawPause = drawPause;
   LK.cardRects = cardRects;
+  LK.titleButtons = titleButtons;
 })((globalThis.LK = globalThis.LK || {}));

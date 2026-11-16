@@ -17,7 +17,8 @@
     modeAge: 0,
     offer: [],
     hover: -1,
-    best: LK.loadBest(),
+    bests: { normal: LK.loadBest('normal'), gale: LK.loadBest('gale') },
+    lastMode: 'normal',
     attract: null,
     frozen: false,
   };
@@ -64,9 +65,10 @@
     game.modeAge = 0;
   }
 
-  function startGame() {
+  function startGame(mode) {
     const seed = Math.floor(Math.random() * 1e9);
-    game.run = LK.createRun(seed);
+    game.lastMode = mode || game.lastMode;
+    game.run = LK.createRun(seed, game.lastMode);
     game.view = LK.createView(seed);
     game.fx = LK.createEffects();
     beginNight();
@@ -80,9 +82,10 @@
   }
 
   function endRun(mode) {
-    if (game.run.score > game.best) {
-      game.best = game.run.score;
-      LK.saveBest(game.best);
+    const runMode = game.run.mode;
+    if (game.run.score > game.bests[runMode]) {
+      game.bests[runMode] = game.run.score;
+      LK.saveBest(game.run.score, runMode);
     }
     setMode(mode);
     LK.setFocusHum(false);
@@ -98,9 +101,13 @@
     beginNight();
   }
 
-  function cardAt(p) {
+  function rectIndexAt(rects, p) {
     if (!p) return -1;
-    return LK.cardRects().findIndex((r) => p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h);
+    return rects.findIndex((r) => p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h);
+  }
+
+  function cardAt(p) {
+    return rectIndexAt(LK.cardRects(), p);
   }
 
   // ---- one fixed step ---------------------------------------------------------------------------
@@ -115,9 +122,19 @@
 
     if (game.mode === 'title') {
       stepAttract(dt);
-      if (clicked || pressed('enter', ' ')) {
+      const buttons = LK.titleButtons();
+      game.hover = rectIndexAt(buttons, input.pointer);
+      let chosen = null;
+      for (const p of presses.clicks) {
+        const index = rectIndexAt(buttons, p);
+        // A click anywhere else starts the mode played last (normal the first time).
+        chosen = index >= 0 ? buttons[index].mode : game.lastMode;
+      }
+      if (pressed('enter', ' ', '1')) chosen = 'normal';
+      if (pressed('g', '2')) chosen = 'gale';
+      if (chosen) {
         LK.playSound('click');
-        startGame();
+        startGame(chosen);
       }
       return;
     }
@@ -169,9 +186,12 @@
         for (const key of ['1', '2', '3']) if (pressed(key)) return chooseUpgrade(Number(key) - 1);
       }
     } else if (game.mode === 'gameover' || game.mode === 'victory') {
-      if (game.modeAge > 1.2 && (clicked || pressed('r', 'enter'))) {
+      if (game.modeAge > 1.2 && pressed('t')) {
         LK.playSound('click');
-        startGame();
+        setMode('title');
+      } else if (game.modeAge > 1.2 && (clicked || pressed('r', 'enter'))) {
+        LK.playSound('click');
+        startGame(game.run.mode);
       }
     }
   }
@@ -184,7 +204,7 @@
     if (game.mode === 'title') {
       const a = game.attract;
       LK.drawNight(ctx, a.view, a.night, game.time, a.fx, 0.86);
-      LK.drawTitle(ctx, game.time, game.best);
+      LK.drawTitle(ctx, game.time, game.bests, game.hover);
       return;
     }
     const shake = game.fx.shake;
@@ -202,8 +222,8 @@
     if (game.mode === 'paused') LK.drawPause(ctx);
     if (game.mode === 'dawn') LK.drawDawnReport(ctx, game.run, game.night, game.time);
     if (game.mode === 'upgrade') LK.drawUpgradeChoice(ctx, game.run, game.offer, game.hover, game.time);
-    if (game.mode === 'gameover') LK.drawGameOver(ctx, game.run, game.best, game.time);
-    if (game.mode === 'victory') LK.drawVictory(ctx, game.run, game.best, game.time);
+    if (game.mode === 'gameover') LK.drawGameOver(ctx, game.run, game.bests[game.run.mode], game.time);
+    if (game.mode === 'victory') LK.drawVictory(ctx, game.run, game.bests[game.run.mode], game.time);
   }
 
   // ---- start -------------------------------------------------------------------------------------

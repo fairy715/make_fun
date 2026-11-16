@@ -5,9 +5,19 @@
 (function (LK) {
   'use strict';
 
-  function createRun(seed) {
+  /** Run modes: the gale runs the whole sea faster while the keeper's lamp keeps its own pace. */
+  const MODES = {
+    normal: { name: 'Normal watch', pace: 1, scoreScale: 1 },
+    gale: { name: 'Gale watch', pace: 1.6, scoreScale: 1.5 },
+  };
+
+  function createRun(seed, mode) {
+    const m = MODES[mode] ? mode : 'normal';
     return {
       seed,
+      mode: m,
+      pace: MODES[m].pace,
+      scoreScale: MODES[m].scoreScale,
       rng: LK.createRng(LK.hashSeed('run:' + seed)),
       nightIndex: 0,
       score: 0,
@@ -100,12 +110,13 @@
   function dock(run, night, ship, events) {
     const { SCORE } = LK;
     ship.state = 'docked';
-    let points = Math.round(ship.type.points * run.combo);
+    let points = ship.type.points * run.combo;
     let quick = false;
     if (ship.kind === 'clipper' && ship.age < SCORE.clipperTime) {
       points += SCORE.clipperQuickBonus;
       quick = true;
     }
+    points = Math.round(points * run.scoreScale);
     run.score += points;
     night.counts.docked += 1;
     run.totals.docked += 1;
@@ -122,15 +133,18 @@
   function stepNight(run, night, input, dt) {
     const events = [];
     if (night.over) return events;
+    // The sea moves at the run's pace; the lamp, the foghorn and the keeper's light keep real time.
+    const keeperDt = dt;
+    dt *= run.pace;
     night.t += dt;
     const lamp = night.lamp;
     if (input.aim !== null && input.aim !== undefined) lamp.target = input.aim;
-    if (input.turn) lamp.target = LK.clampAngle(lamp.target + input.turn * night.stats.turnSpeed * dt);
-    LK.updateLamp(lamp, night.stats, input.focus, dt);
+    if (input.turn) lamp.target = LK.clampAngle(lamp.target + input.turn * night.stats.turnSpeed * keeperDt);
+    LK.updateLamp(lamp, night.stats, input.focus, keeperDt);
 
     // The foghorn: every ship drops anchor for a moment.
-    night.hornCooldown = Math.max(0, night.hornCooldown - dt);
-    night.hornFlash = Math.max(0, night.hornFlash - dt);
+    night.hornCooldown = Math.max(0, night.hornCooldown - keeperDt);
+    night.hornFlash = Math.max(0, night.hornFlash - keeperDt);
     if (input.horn && night.hornCooldown <= 0) {
       night.hornCooldown = night.stats.hornCooldown;
       night.hornFlash = 1.2;
@@ -154,7 +168,7 @@
         o.seen = true;
         o.reveal = night.stats.revealLinger;
       } else {
-        o.reveal = Math.max(0, o.reveal - dt);
+        o.reveal = Math.max(0, o.reveal - keeperDt);
       }
     }
 
@@ -164,14 +178,15 @@
       ship.focusLit = ship.lit && lamp.focused;
       if (ship.kind === 'smuggler' || ship.kind === 'pirate') {
         if (ship.lit && ship.state === 'sail') {
-          ship.exposed += dt;
+          ship.exposed += keeperDt;
           const needed = ship.kind === 'pirate' ? LK.PIRATE.exposeTime * (night.stats.exposeTime / LK.SMUGGLER.exposeTime) : night.stats.exposeTime;
           if (ship.exposed >= needed) {
             ship.state = 'fleeing';
-            run.score += ship.type.points;
+            const points = Math.round(ship.type.points * run.scoreScale);
+            run.score += points;
             night.counts.chased += 1;
             run.totals.chased += 1;
-            events.push({ type: 'chased', x: ship.x, y: ship.y, points: ship.type.points, kind: ship.kind });
+            events.push({ type: 'chased', x: ship.x, y: ship.y, points, kind: ship.kind });
           }
         }
       } else if (ship.lit) {
@@ -182,7 +197,7 @@
 
     LK.fireCannons(night, events, dt);
     for (const ship of LK.moveBalls(night, events, dt)) sinkShip(run, night, ship, 'cannon', events);
-    LK.updateMonsters(run, night, events, dt, (ship) => sinkShip(run, night, ship, 'monster', events));
+    LK.updateMonsters(run, night, events, dt, (ship) => sinkShip(run, night, ship, 'monster', events), keeperDt);
 
     for (const ship of night.ships) {
       if (ship.state === 'fleeing') {
@@ -239,11 +254,12 @@
 
   function finishNight(run, night, events) {
     const { SCORE } = LK;
-    const bonus = SCORE.nightBonus * (night.index + 1);
+    const bonus = Math.round(SCORE.nightBonus * (night.index + 1) * run.scoreScale);
     const flawless = night.counts.wrecked === 0 && night.counts.plundered === 0 && night.counts.rescued === 0;
-    run.score += bonus + (flawless ? SCORE.flawlessBonus : 0);
+    const flawlessBonus = flawless ? Math.round(SCORE.flawlessBonus * run.scoreScale) : 0;
+    run.score += bonus + flawlessBonus;
     if (flawless) run.totals.flawless += 1;
-    night.result = { bonus, flawless, flawlessBonus: flawless ? SCORE.flawlessBonus : 0 };
+    night.result = { bonus, flawless, flawlessBonus };
     events.push({ type: 'nightClear', flawless, last: night.index === LK.NIGHTS.length - 1 });
   }
 
@@ -253,6 +269,7 @@
     return run.nightIndex < LK.NIGHTS.length ? run.nightIndex : null;
   }
 
+  LK.MODES = MODES;
   LK.createRun = createRun;
   LK.startNight = startNight;
   LK.stepNight = stepNight;

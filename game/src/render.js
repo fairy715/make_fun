@@ -86,69 +86,196 @@
     }
   }
 
-  function hullPath(ctx, r) {
+  // ---- ships, seen from above, bow pointing along +x ------------------------------------------
+
+  const SHIP_DRAW_SCALE = 1.45;
+
+  /** Each kind's drawn proportions: length and beam in units of its radius, and its colours. */
+  const SHIP_ART = {
+    skiff: { length: 2.4, beam: 1.0, hull: '#a8693a', rim: '#6b3f1f', deck: '#d9a86c', sail: '#f3e6c8', sailEdge: '#c7b68f' },
+    steamer: { length: 3.0, beam: 1.05, hull: '#3d4a57', rim: '#1f272f', deck: '#9b7b56', sail: '#e9e2d2', sailEdge: '#b9b0a0' },
+    clipper: { length: 3.1, beam: 0.9, hull: '#1f4e66', rim: '#d4a944', deck: '#c79a62', sail: '#fbf6ea', sailEdge: '#cfc6b0' },
+    smuggler: { length: 2.5, beam: 0.95, hull: '#24262d', rim: '#121318', deck: '#3b3530', sail: '#4a4e58', sailEdge: '#2d3038' },
+    pirate: { length: 3.0, beam: 1.15, hull: '#3a1714', rim: '#120707', deck: '#5a3b26', sail: '#17171a', sailEdge: '#a32020' },
+  };
+
+  /** A hull outline: pointed bow at +x, rounded flanks, flat transom at the stern. */
+  function hullPath(ctx, half, beam) {
     ctx.beginPath();
-    ctx.moveTo(r * 1.5, 0);
-    ctx.quadraticCurveTo(r * 0.6, -r * 0.75, -r, -r * 0.6);
-    ctx.lineTo(-r * 1.1, 0);
-    ctx.lineTo(-r, r * 0.6);
-    ctx.quadraticCurveTo(r * 0.6, r * 0.75, r * 1.5, 0);
+    ctx.moveTo(half, 0);
+    ctx.bezierCurveTo(half * 0.55, -beam * 0.62, -half * 0.35, -beam * 0.55, -half, -beam * 0.38);
+    ctx.lineTo(-half, beam * 0.38);
+    ctx.bezierCurveTo(-half * 0.35, beam * 0.55, half * 0.55, beam * 0.62, half, 0);
     ctx.closePath();
   }
 
+  /** A square sail on a yard across the ship, billowing forward. */
+  function squareSail(ctx, x, span, depth, art) {
+    ctx.fillStyle = art.sail;
+    ctx.strokeStyle = art.sailEdge;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(x, -span);
+    ctx.quadraticCurveTo(x + depth, 0, x, span);
+    ctx.quadraticCurveTo(x + depth * 0.35, 0, x, -span);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.strokeStyle = '#4a3622';
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(x, -span * 1.08);
+    ctx.lineTo(x, span * 1.08);
+    ctx.stroke();
+  }
+
+  /** A fore-and-aft sail swung out to one side from its mast. */
+  function lateenSail(ctx, x, length, swing, art) {
+    ctx.fillStyle = art.sail;
+    ctx.strokeStyle = art.sailEdge;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(x + length * 0.45, 0);
+    ctx.quadraticCurveTo(x - length * 0.1, swing * 1.25, x - length * 0.6, swing);
+    ctx.lineTo(x - length * 0.55, 0);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+  }
+
+  function mastTop(ctx, x) {
+    ctx.fillStyle = '#3a2a1a';
+    ctx.beginPath();
+    ctx.arc(x, 0, 1.6, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  function pennant(ctx, x, length, color, time, bob) {
+    const flap = Math.sin(time * 9 + bob) * 1.5;
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(x, -1.2);
+    ctx.quadraticCurveTo(x - length * 0.5, flap - 1, x - length, flap);
+    ctx.quadraticCurveTo(x - length * 0.5, flap + 1, x, 1.2);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  function deckPlanks(ctx, half, beam, art) {
+    ctx.fillStyle = art.deck;
+    hullPath(ctx, half * 0.86, beam * 0.78);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(60, 40, 20, 0.35)';
+    ctx.lineWidth = 0.7;
+    for (let k = -2; k <= 2; k++) {
+      ctx.beginPath();
+      ctx.moveTo(-half * 0.8, k * beam * 0.13);
+      ctx.lineTo(half * 0.55, k * beam * 0.1);
+      ctx.stroke();
+    }
+  }
+
   function drawShip(ctx, ship, time) {
+    const art = SHIP_ART[ship.kind];
     const r = ship.r;
-    const type = ship.type;
+    const half = (r * art.length) / 2;
+    const beam = r * art.beam;
     ctx.save();
     ctx.translate(ship.x, ship.y);
-    ctx.rotate(ship.heading + Math.sin(time * 2 + ship.bob) * 0.04);
-    ctx.fillStyle = type.hull;
-    hullPath(ctx, r);
+    ctx.rotate(ship.heading + Math.sin(time * 2 + ship.bob) * 0.035);
+    // Ships are drawn larger than the circle the rules test, so they read at a glance.
+    ctx.scale(SHIP_DRAW_SCALE, SHIP_DRAW_SCALE);
+    // Shadow on the water and the bow wave.
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+    ctx.save();
+    ctx.translate(2.5, 3.5);
+    hullPath(ctx, half, beam);
     ctx.fill();
-    ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
-    ctx.lineWidth = 1.5;
+    ctx.restore();
+    if (ship.halt <= 0) {
+      ctx.strokeStyle = 'rgba(230, 245, 255, 0.35)';
+      ctx.lineWidth = 1;
+      for (const side of [-1, 1]) {
+        ctx.beginPath();
+        ctx.moveTo(half + 1, 0);
+        ctx.quadraticCurveTo(half * 0.8, side * beam * 0.5, half * 0.45, side * beam * 0.68);
+        ctx.stroke();
+      }
+    }
+    // Hull with its rail.
+    ctx.fillStyle = art.hull;
+    hullPath(ctx, half, beam);
+    ctx.fill();
+    ctx.strokeStyle = art.rim;
+    ctx.lineWidth = 1.8;
     ctx.stroke();
-    ctx.fillStyle = '#8a6a48';
-    ctx.fillRect(-r * 0.7, -r * 0.35, r * 1.5, r * 0.7);
-    ctx.fillStyle = type.sail;
-    if (ship.kind === 'steamer') {
-      ctx.fillStyle = '#c9c1b2';
-      ctx.fillRect(-r * 0.6, -r * 0.45, r * 1.0, r * 0.9);
-      ctx.fillStyle = '#b43c2e';
+    deckPlanks(ctx, half, beam, art);
+
+    if (ship.kind === 'skiff') {
+      // A small fishing boat: one lateen sail, a net heap, a lantern at the stern.
+      ctx.fillStyle = '#6f8a7a';
       ctx.beginPath();
-      ctx.arc(-r * 0.05, 0, r * 0.32, 0, Math.PI * 2);
+      ctx.ellipse(-half * 0.45, beam * 0.15, beam * 0.28, beam * 0.22, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = '#222';
+      lateenSail(ctx, half * 0.2, half * 1.05, beam * 0.7 * (ship.id % 2 ? 1 : -1), art);
+      mastTop(ctx, half * 0.2);
+    } else if (ship.kind === 'steamer') {
+      // A cargo steamer: crates forward, a white bridge, a red funnel with a black top.
+      ctx.fillStyle = '#8c5a3a';
+      ctx.fillRect(half * 0.15, -beam * 0.36, half * 0.32, beam * 0.32);
+      ctx.fillStyle = '#5f7f8c';
+      ctx.fillRect(half * 0.15, beam * 0.04, half * 0.32, beam * 0.32);
+      ctx.fillStyle = art.sail;
+      ctx.fillRect(-half * 0.55, -beam * 0.42, half * 0.6, beam * 0.84);
+      ctx.fillStyle = '#7fb4cf';
+      for (let k = 0; k < 3; k++) ctx.fillRect(-half * 0.05, -beam * 0.3 + k * beam * 0.25, 2, beam * 0.14);
+      ctx.fillStyle = '#c0392b';
       ctx.beginPath();
-      ctx.arc(-r * 0.05, 0, r * 0.16, 0, Math.PI * 2);
+      ctx.arc(-half * 0.32, 0, beam * 0.3, 0, Math.PI * 2);
       ctx.fill();
+      ctx.fillStyle = '#16181b';
+      ctx.beginPath();
+      ctx.arc(-half * 0.32, 0, beam * 0.17, 0, Math.PI * 2);
+      ctx.fill();
+      // Smoke trailing astern.
+      for (let k = 0; k < 4; k++) {
+        const drift = ((time * 0.9 + k * 0.25) % 1);
+        ctx.fillStyle = `rgba(150, 150, 155, ${0.4 * (1 - drift)})`;
+        ctx.beginPath();
+        ctx.arc(-half * 0.32 - drift * r * 2.2, Math.sin(time * 2 + k) * 2, beam * (0.18 + drift * 0.35), 0, Math.PI * 2);
+        ctx.fill();
+      }
     } else if (ship.kind === 'clipper') {
-      for (const off of [-0.55, 0.05, 0.6]) {
-        ctx.beginPath();
-        ctx.ellipse(r * off, 0, r * 0.22, r * 0.85, 0, 0, Math.PI * 2);
-        ctx.fill();
-      }
+      // A mail clipper: slim and fast, three masts of square sails, a gold stripe, a long pennant.
+      squareSail(ctx, half * 0.42, beam * 0.95, r * 0.85, art);
+      squareSail(ctx, half * 0.02, beam * 1.1, r * 0.95, art);
+      squareSail(ctx, -half * 0.4, beam * 0.95, r * 0.85, art);
+      lateenSail(ctx, half * 0.8, half * 0.5, beam * 0.35, art);
+      pennant(ctx, -half * 0.4, r * 1.1, '#e0b13c', time, ship.bob);
+    } else if (ship.kind === 'smuggler') {
+      // A smuggler: low and dark, one patched sail, crates under a tarp, no lights.
+      ctx.fillStyle = '#2f3a2f';
+      ctx.fillRect(-half * 0.55, -beam * 0.25, half * 0.45, beam * 0.5);
+      lateenSail(ctx, half * 0.2, half * 1.3, beam * 0.75 * (ship.id % 2 ? 1 : -1), art);
+      mastTop(ctx, half * 0.2);
     } else if (ship.kind === 'pirate') {
-      for (const off of [-0.5, 0.35]) {
+      // A Black Sail raider: black square sails with a red band, gun ports along both sides.
+      ctx.fillStyle = '#1a1a1a';
+      for (let k = -2; k <= 2; k++) {
+        ctx.fillRect(k * half * 0.22 - 2, -beam * 0.62, 4, 3.5);
+        ctx.fillRect(k * half * 0.22 - 2, beam * 0.62 - 3.5, 4, 3.5);
+      }
+      squareSail(ctx, half * 0.3, beam * 1.12, r * 0.6, art);
+      squareSail(ctx, -half * 0.3, beam * 1.12, r * 0.6, art);
+      ctx.strokeStyle = '#b02a2a';
+      ctx.lineWidth = 2;
+      for (const x of [half * 0.3, -half * 0.3]) {
         ctx.beginPath();
-        ctx.ellipse(r * off, 0, r * 0.26, r * 0.95, 0, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.moveTo(x + r * 0.22, -beam * 0.7);
+        ctx.quadraticCurveTo(x + r * 0.42, 0, x + r * 0.22, beam * 0.7);
+        ctx.stroke();
       }
-      ctx.fillStyle = '#a32020';
-      ctx.fillRect(-r * 0.62, -r * 0.08, r * 1.1, r * 0.16);
-      // Gun ports.
-      ctx.fillStyle = '#d9a441';
-      for (const off of [-0.5, 0, 0.5]) {
-        ctx.fillRect(r * off - 1.5, -r * 0.62, 3, 3);
-        ctx.fillRect(r * off - 1.5, r * 0.55, 3, 3);
-      }
-    } else {
-      ctx.beginPath();
-      ctx.moveTo(r * 0.7, 0);
-      ctx.lineTo(-r * 0.5, -r * 0.8);
-      ctx.lineTo(-r * 0.5, r * 0.8);
-      ctx.closePath();
-      ctx.fill();
+      pennant(ctx, -half * 0.3, r * 1.2, '#b02a2a', time, ship.bob);
     }
     ctx.restore();
   }
