@@ -34,27 +34,72 @@
     line(ctx, words, y, 22, `rgba(255, 227, 154, ${a})`, 'bold');
   }
 
+  /** A large call-to-action plate: what to click, readable even on a thumbnail. */
+  function plate(ctx, words, y, size, time) {
+    ctx.font = `bold ${size}px ${SERIF}`;
+    const w = ctx.measureText(words).width + 80;
+    const h = size + 34;
+    const pulse = 0.5 + 0.5 * Math.sin(time * 3);
+    ctx.fillStyle = 'rgba(52, 38, 14, 0.92)';
+    ctx.strokeStyle = `rgba(255, 214, 140, ${0.65 + 0.35 * pulse})`;
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.roundRect(LK.VIEW.width / 2 - w / 2, y - h / 2, w, h, 16);
+    ctx.fill();
+    ctx.stroke();
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#ffe39a';
+    ctx.fillText(words, LK.VIEW.width / 2, y + 2);
+  }
+
   /** The two mode buttons under the title; main.js tests clicks against these. */
   function titleButtons() {
-    const w = 300;
-    const h = 74;
+    const w = 400;
+    const h = 124;
     const cx = LK.VIEW.width / 2;
     return [
-      { mode: 'gale', x: cx - w - 18, y: 418, w, h, label: 'Gale watch', sub: 'The full storm · score x1.5 · Enter · 1' },
-      { mode: 'normal', x: cx + 18, y: 418, w, h, label: 'Calm watch', sub: 'Gentler seas to learn the lamp · C · 2' },
+      { mode: 'gale', x: cx - w - 20, y: 236, w, h, label: 'GALE WATCH', sub: 'The full storm · score x1.5 · Enter · 1' },
+      { mode: 'normal', x: cx + 20, y: 236, w, h, label: 'CALM WATCH', sub: 'Gentler seas to learn the lamp · C · 2' },
     ];
   }
 
   function drawTitle(ctx, time, bests, hover) {
     const w = LK.VIEW.width;
-    const g = ctx.createLinearGradient(0, 0, 0, 300);
-    g.addColorStop(0, 'rgba(2, 6, 16, 0.75)');
+    const g = ctx.createLinearGradient(0, 0, 0, 420);
+    g.addColorStop(0, 'rgba(2, 6, 16, 0.8)');
     g.addColorStop(1, 'rgba(2, 6, 16, 0)');
     ctx.fillStyle = g;
-    ctx.fillRect(0, 0, w, 300);
-    title(ctx, 'LAMPLIGHT KEEPER', 120, 72, '#ffe2a0');
-    line(ctx, 'Seven nights. One lamp. Bring every ship home.', 178, 22, 'rgba(235, 235, 225, 0.9)', 'italic');
-    LK.hudPanel(ctx, w / 2 - 300, 222, 600, 176);
+    ctx.fillRect(0, 0, w, 420);
+    title(ctx, 'LAMPLIGHT KEEPER', 96, 104, '#ffe2a0');
+    line(ctx, 'Seven nights. One lamp. Bring every ship home.', 176, 30, 'rgba(240, 240, 230, 0.95)', 'italic');
+    titleButtons().forEach((b, i) => {
+      const on = hover === i;
+      const pulse = 0.5 + 0.5 * Math.sin(time * 3 + i * 1.5);
+      ctx.fillStyle = on ? 'rgba(60, 46, 24, 0.95)' : 'rgba(16, 22, 34, 0.92)';
+      ctx.strokeStyle = b.mode === 'gale' ? `rgba(255, 140, 110, ${0.6 + 0.4 * pulse})` : `rgba(255, 214, 140, ${0.6 + 0.4 * pulse})`;
+      ctx.lineWidth = on ? 5 : 4;
+      ctx.beginPath();
+      ctx.roundRect(b.x, b.y, b.w, b.h, 16);
+      ctx.fill();
+      ctx.stroke();
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.font = `bold 50px ${SERIF}`;
+      ctx.fillStyle = b.mode === 'gale' ? '#ffb39a' : '#ffe39a';
+      ctx.fillText(b.label, b.x + b.w / 2, b.y + 50);
+      ctx.font = `18px ${SERIF}`;
+      ctx.fillStyle = 'rgba(235, 235, 225, 0.85)';
+      ctx.fillText(b.sub, b.x + b.w / 2, b.y + 96);
+      const best = bests[b.mode] || 0;
+      if (best > 0) {
+        ctx.font = `bold 20px ${SERIF}`;
+        ctx.fillStyle = 'rgba(255, 227, 154, 0.9)';
+        ctx.fillText(`Best ${best.toLocaleString('en-US')}`, b.x + b.w / 2, b.y + b.h + 22);
+      }
+    });
+    plate(ctx, 'CLICK A WATCH TO START', 432, 40, time);
+    LK.hudPanel(ctx, w / 2 - 330, 486, 660, 150);
     const rows = [
       ['Mouse', 'swing the beam: lit ships steer clear of rocks'],
       ['Hold left button', 'focus the beam: farther, faster ships, burns oil'],
@@ -62,40 +107,16 @@
       ['A / D', 'swing the beam by keyboard     P pause     M sound'],
     ];
     rows.forEach(([key, text], i) => {
-      const y = 254 + i * 36;
+      const y = 512 + i * 32;
       ctx.textAlign = 'right';
-      ctx.font = `bold 17px ${SERIF}`;
-      ctx.fillStyle = '#ffd36b';
-      ctx.fillText(key, w / 2 - 110, y);
-      ctx.textAlign = 'left';
-      ctx.font = `16px ${SERIF}`;
-      ctx.fillStyle = 'rgba(235, 235, 225, 0.9)';
-      ctx.fillText(text, w / 2 - 92, y);
-    });
-    titleButtons().forEach((b, i) => {
-      const on = hover === i;
-      const pulse = 0.5 + 0.5 * Math.sin(time * 3 + i * 1.5);
-      ctx.fillStyle = on ? 'rgba(60, 46, 24, 0.95)' : 'rgba(16, 22, 34, 0.9)';
-      ctx.strokeStyle = b.mode === 'gale' ? `rgba(255, 140, 110, ${0.6 + 0.4 * pulse})` : `rgba(255, 214, 140, ${0.6 + 0.4 * pulse})`;
-      ctx.lineWidth = on ? 3 : 2;
-      ctx.beginPath();
-      ctx.roundRect(b.x, b.y, b.w, b.h, 12);
-      ctx.fill();
-      ctx.stroke();
-      ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.font = `bold 24px ${SERIF}`;
-      ctx.fillStyle = b.mode === 'gale' ? '#ffb39a' : '#ffe39a';
-      ctx.fillText(b.label, b.x + b.w / 2, b.y + 28);
-      ctx.font = `14px ${SERIF}`;
-      ctx.fillStyle = 'rgba(235, 235, 225, 0.8)';
-      ctx.fillText(b.sub, b.x + b.w / 2, b.y + 54);
-      const best = bests[b.mode] || 0;
-      if (best > 0) {
-        ctx.font = `15px ${SERIF}`;
-        ctx.fillStyle = 'rgba(235, 235, 225, 0.7)';
-        ctx.fillText(`Best ${best.toLocaleString('en-US')}`, b.x + b.w / 2, b.y + b.h + 18);
-      }
+      ctx.font = `bold 18px ${SERIF}`;
+      ctx.fillStyle = '#ffd36b';
+      ctx.fillText(key, w / 2 - 120, y);
+      ctx.textAlign = 'left';
+      ctx.font = `17px ${SERIF}`;
+      ctx.fillStyle = 'rgba(235, 235, 225, 0.92)';
+      ctx.fillText(text, w / 2 - 102, y);
     });
   }
 
@@ -133,16 +154,17 @@
 
   /** Where the three upgrade cards sit; main.js tests clicks against these. */
   function cardRects() {
-    const w = 300;
-    const h = 250;
+    const w = 350;
+    const h = 350;
     const gap = 36;
     const left = LK.VIEW.width / 2 - (w * 3 + gap * 2) / 2;
-    return [0, 1, 2].map((i) => ({ x: left + i * (w + gap), y: 250, w, h }));
+    return [0, 1, 2].map((i) => ({ x: left + i * (w + gap), y: 206, w, h }));
   }
 
-  function drawIcon(ctx, icon, x, y) {
+  function drawIcon(ctx, icon, x, y, scale) {
     ctx.save();
     ctx.translate(x, y);
+    ctx.scale(scale || 1, scale || 1);
     ctx.strokeStyle = '#ffd36b';
     ctx.fillStyle = '#ffd36b';
     ctx.lineWidth = 3;
@@ -250,36 +272,36 @@
   }
 
   function drawUpgradeChoice(ctx, run, offer, hover, time) {
-    veil(ctx, 0.6);
-    title(ctx, 'The lamp room: choose one improvement', 150, 40, '#ffe2a0');
-    line(ctx, `Night ${run.nightIndex + 1} comes next: ${LK.NIGHTS[run.nightIndex].name}`, 200, 19, 'rgba(235, 235, 225, 0.85)', 'italic');
+    veil(ctx, 0.66);
+    title(ctx, 'CHOOSE AN UPGRADE', 78, 76, '#ffe2a0');
+    line(ctx, `The lamp room, before night ${run.nightIndex + 1}: ${LK.NIGHTS[run.nightIndex].name}`, 150, 26, 'rgba(240, 240, 230, 0.92)', 'italic');
     cardRects().forEach((rect, i) => {
       const id = offer[i];
       if (!id) return;
       const up = LK.upgradeById(id);
       const lift = hover === i ? -8 : 0;
-      ctx.fillStyle = hover === i ? 'rgba(40, 52, 70, 0.95)' : 'rgba(16, 26, 42, 0.92)';
-      ctx.strokeStyle = hover === i ? '#ffd36b' : 'rgba(255, 214, 140, 0.4)';
-      ctx.lineWidth = hover === i ? 3 : 1.5;
+      ctx.fillStyle = hover === i ? 'rgba(44, 56, 76, 0.97)' : 'rgba(16, 26, 42, 0.94)';
+      ctx.strokeStyle = hover === i ? '#ffd36b' : 'rgba(255, 214, 140, 0.55)';
+      ctx.lineWidth = hover === i ? 5 : 3;
       ctx.beginPath();
-      ctx.roundRect(rect.x, rect.y + lift, rect.w, rect.h, 14);
+      ctx.roundRect(rect.x, rect.y + lift, rect.w, rect.h, 18);
       ctx.fill();
       ctx.stroke();
-      drawIcon(ctx, up.icon, rect.x + rect.w / 2, rect.y + 60 + lift);
+      drawIcon(ctx, up.icon, rect.x + rect.w / 2, rect.y + 86 + lift, 2.6);
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillStyle = '#fff3d6';
-      ctx.font = `bold 24px ${SERIF}`;
-      ctx.fillText(up.name, rect.x + rect.w / 2, rect.y + 118 + lift);
-      ctx.fillStyle = 'rgba(235, 235, 225, 0.85)';
-      ctx.font = `17px ${SERIF}`;
-      wrapText(ctx, up.text, rect.x + rect.w / 2, rect.y + 158 + lift, rect.w - 40, 24);
+      ctx.font = `bold 36px ${SERIF}`;
+      ctx.fillText(up.name, rect.x + rect.w / 2, rect.y + 182 + lift);
+      ctx.fillStyle = 'rgba(235, 235, 225, 0.9)';
+      ctx.font = `19px ${SERIF}`;
+      wrapText(ctx, up.text, rect.x + rect.w / 2, rect.y + 228 + lift, rect.w - 44, 26);
       const owned = run.upgrades[id] || 0;
-      ctx.fillStyle = 'rgba(255, 214, 140, 0.7)';
-      ctx.font = `14px ${SERIF}`;
-      ctx.fillText(`${owned ? `Owned ${owned} / ${up.max}   ·   ` : ''}Press ${i + 1}`, rect.x + rect.w / 2, rect.y + rect.h - 24 + lift);
+      ctx.fillStyle = '#ffd36b';
+      ctx.font = `bold 20px ${SERIF}`;
+      ctx.fillText(`${owned ? `Owned ${owned} / ${up.max}   ·   ` : ''}Click or press ${i + 1}`, rect.x + rect.w / 2, rect.y + rect.h - 28 + lift);
     });
-    line(ctx, `Trust ${run.trust} / ${run.maxTrust}     Score ${run.score.toLocaleString('en-US')}`, 560, 18, 'rgba(235, 235, 225, 0.75)');
+    line(ctx, `Trust ${run.trust} / ${run.maxTrust}        Score ${run.score.toLocaleString('en-US')}`, 618, 34, '#ffd36b', 'bold');
     void time;
   }
 
@@ -293,14 +315,21 @@
     ];
   }
 
+  /** The end card both endings share: the big score, the run's numbers, and how to play again. */
+  function endCard(ctx, run, best, time, again) {
+    line(ctx, 'FINAL SCORE', 232, 34, 'rgba(255, 227, 154, 0.95)', 'bold');
+    title(ctx, run.score.toLocaleString('en-US'), 318, 124, '#ffd36b');
+    statRows(run).forEach((r, i) => line(ctx, r, 400 + i * 29, 19, 'rgba(244, 244, 234, 0.94)'));
+    line(ctx, `${run.score >= best && run.score > 0 ? 'A new best watch!' : `Best watch: ${best.toLocaleString('en-US')}`}   ·   ${modeLine(run)}`, 524, 22, 'rgba(255, 227, 154, 0.92)', 'bold');
+    plate(ctx, again, 596, 40, time);
+    line(ctx, 'click or press R   ·   T for the title', 650, 19, 'rgba(235, 235, 225, 0.85)');
+  }
+
   function drawGameOver(ctx, run, best, time) {
-    veil(ctx, 0.72);
-    title(ctx, 'THE LAMP GOES DARK', 160, 64, '#ff9c8a');
-    line(ctx, `The harbour lost its trust on night ${run.nightIndex + 1}: ${LK.NIGHTS[run.nightIndex].name}`, 220, 20, 'rgba(235, 235, 225, 0.9)', 'italic');
-    statRows(run).forEach((r, i) => line(ctx, r, 290 + i * 34, 20, 'rgba(240, 240, 230, 0.92)'));
-    line(ctx, `Final score ${run.score.toLocaleString('en-US')}`, 450, 34, '#ffd36b', 'bold');
-    line(ctx, `${run.score >= best && run.score > 0 ? 'A new best watch!' : `Best watch: ${best.toLocaleString('en-US')}`}   ·   ${modeLine(run)}`, 494, 18, 'rgba(235, 235, 225, 0.8)');
-    prompt(ctx, 'Click or press R to keep watch again   ·   T for the title', 580, time);
+    veil(ctx, 0.74);
+    title(ctx, 'THE LAMP GOES DARK', 84, 84, '#ff9c8a');
+    line(ctx, `The harbour lost its trust on night ${run.nightIndex + 1}: ${LK.NIGHTS[run.nightIndex].name}`, 160, 24, 'rgba(240, 240, 230, 0.92)', 'italic');
+    endCard(ctx, run, best, time, 'KEEP WATCH AGAIN');
   }
 
   function modeLine(run) {
@@ -314,12 +343,9 @@
     g.addColorStop(1, 'rgba(2, 6, 16, 0.75)');
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, LK.VIEW.width, LK.VIEW.height);
-    title(ctx, 'THE SEASON IS SAFE', 160, 64, '#ffe2a0');
-    line(ctx, 'Seven nights kept. The first light of spring reaches the bay.', 220, 21, 'rgba(250, 240, 225, 0.95)', 'italic');
-    statRows(run).forEach((r, i) => line(ctx, r, 290 + i * 34, 20, 'rgba(250, 245, 235, 0.95)'));
-    line(ctx, `Final score ${run.score.toLocaleString('en-US')}`, 450, 34, '#ffd36b', 'bold');
-    line(ctx, `${run.score >= best ? 'A new best watch!' : `Best watch: ${best.toLocaleString('en-US')}`}   ·   ${modeLine(run)}`, 494, 18, 'rgba(250, 240, 225, 0.85)');
-    prompt(ctx, 'Click or press R to begin a new season   ·   T for the title', 580, time);
+    title(ctx, 'THE SEASON IS SAFE', 84, 84, '#ffe2a0');
+    line(ctx, 'Seven nights kept. The first light of spring reaches the bay.', 160, 24, 'rgba(250, 240, 225, 0.96)', 'italic');
+    endCard(ctx, run, best, time, 'BEGIN A NEW SEASON');
   }
 
   function drawPause(ctx) {
